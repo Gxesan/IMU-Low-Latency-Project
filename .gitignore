@@ -1,0 +1,21 @@
+# STM32CubeIDE Build Directories
+Debug/
+Release/
+
+# Compiled Object files and binaries
+*.o
+*.elf
+*.bin
+*.hex
+*.map
+*.list
+*.su
+*.a
+
+# Eclipse/IDE specific files (Optional but recommended)
+.metadata/
+*.launch
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
