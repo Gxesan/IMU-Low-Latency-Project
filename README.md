@@ -11,8 +11,8 @@ This project aims to implement a low-latency IMU-based motion tracking system ut
 
 
 **Weekly Progress Log**
-  **Week 1**
-  The main goal of week 1 was to configure SPI and read the WHO_AM_I register successfully. Initial problems encountered were WHO_AM_I returning     incorrect values and the printf feature on the IDE not functioning. The correct value of WHO_AM_I was returned after realizing improper soldering of pins on the IMU, and correcting debug optimization settings on the IDE itself.
+**Week 1**
+The main goal of week 1 was to configure SPI and read the WHO_AM_I register successfully. Initial problems encountered were WHO_AM_I returning     incorrect values and the printf feature on the IDE not functioning. The correct value of WHO_AM_I was returned after realizing improper soldering of pins on the IMU, and correcting debug optimization settings on the IDE itself.
 
-  **Week 2**
-  The goal of week 2 was to actually read the accelerometer/gyroscope data. While ax, ay, az, gx, gy, gz values could be read, there were initial problems regarding the fact that their updates could not be viewed in live, even though those variables were added under "live expressions".
+**Week 2**
+The goal of week 2 was to actually read the accelerometer/gyroscope data. While ax, ay, az, gx, gy, gz values could be read, there were initial problems regarding the fact that their updates could not be viewed in live, even though those variables were added under "live expressions".
