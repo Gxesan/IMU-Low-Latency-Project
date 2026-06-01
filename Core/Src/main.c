@@ -198,6 +198,8 @@ int main(void)
     /* USER CODE END WHILE */
 	  ICM20948_ReadAxes();
 	  HAL_Delay(10);
+	  printf("AX=%d AY=%d AZ=%d GX=%d GY=%d GZ=%d\r\n", ax, ay, az, gx, gy, gz);
+	  HAL_Delay(500);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
