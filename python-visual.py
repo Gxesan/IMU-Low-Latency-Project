@@ -1,12 +1,15 @@
 import serial
 import struct
 import time
+import socket
 
 SERIAL_PORT = 'COM5'
 BAUD_RATE = 115200
 
 ACCEL_SCALE = 16384.0  # Assuming accelerometer range is ±2g
 GYRO_SCALE = 131.0     # Assuming gyroscope range is ±250°/s
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 def parse_sensor_data(line):
 
@@ -57,12 +60,13 @@ if __name__ == '__main__':
 
                 if parsed_data:
                     ax, ay, az, gx, gy, gz = parsed_data
-                    print(f">Accel_X:{ax:.2f}")
-                    print(f">Accel_Y:{ay:.2f}")
-                    print(f">Accel_Z:{az:.2f}")
-                    print(f">Gyro_X:{gx:.2f}")
-                    print(f">Gyro_Y:{gy:.2f}")
-                    print(f">Gyro_Z:{gz:.2f}")
+                    sock.sendto(f"Accel_X:{ax:.2f}".encode(), ("127.0.0.1", 47269))
+                    sock.sendto(f"Accel_Y:{ay:.2f}".encode(), ("127.0.0.1", 47269))
+                    sock.sendto(f"Accel_Z:{az:.2f}".encode(), ("127.0.0.1", 47269))
+
+                    sock.sendto(f"Gyro_X:{gx:.2f}".encode(), ("127.0.0.1", 47269))
+                    sock.sendto(f"Gyro_Y:{gy:.2f}".encode(), ("127.0.0.1", 47269))
+                    sock.sendto(f"Gyro_Z:{gz:.2f}".encode(), ("127.0.0.1", 47269))
 
     except serial.SerialException as e:
         print(f"Error opening serial port: {e}")
