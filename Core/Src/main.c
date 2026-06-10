@@ -46,6 +46,8 @@
 /* Private variables ---------------------------------------------------------*/
 SPI_HandleTypeDef hspi1;
 
+TIM_HandleTypeDef htim2;
+
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
@@ -58,6 +60,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -74,11 +77,7 @@ static void MX_USART2_UART_Init(void);
   // Change &huart2 to your active UART handle if different
 int _write(int file, char *ptr, int len)
 {
-    for (int i = 0; i < len; i++)
-    {
-        while (ITM->PORT[0].u32 == 0);
-        ITM_SendChar((uint32_t)*ptr++);
-    }
+    HAL_UART_Transmit(&huart2, (uint8_t*)ptr, len, HAL_MAX_DELAY);
     return len;
 }
 /* USER CODE END 0 */
@@ -87,31 +86,6 @@ int _write(int file, char *ptr, int len)
   * @brief  The application entry point.
   * @retval int
   */
-
-
-void ICM20948_ReadAxes(void)
-{
-    uint8_t txBuf[15] = {0};
-    uint8_t rxBuf[15] = {0};
-
-    txBuf[0] = 0x2D | 0x80;
-
-    HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_RESET);
-
-    HAL_SPI_TransmitReceive(&hspi1, txBuf, rxBuf, 15, 100);
-
-    HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_SET);
-
-    ax = (int16_t)((rxBuf[1] << 8) | rxBuf[2]);
-    ay = (int16_t)((rxBuf[3] << 8) | rxBuf[4]);
-    az = (int16_t)((rxBuf[5] << 8) | rxBuf[6]);
-
-    gx = (int16_t)((rxBuf[9] << 8) | rxBuf[10]);
-    gy = (int16_t)((rxBuf[11] << 8) | rxBuf[12]);
-    gz = (int16_t)((rxBuf[13] << 8) | rxBuf[14]);
-}
-
-
 int main(void)
 {
 
@@ -139,6 +113,7 @@ int main(void)
   MX_GPIO_Init();
   MX_SPI1_Init();
   MX_USART2_UART_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
   	uint8_t txBuf[2];
@@ -196,10 +171,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	  ICM20948_ReadAxes();
-	  HAL_Delay(10);
-	  printf("AX=%d AY=%d AZ=%d GX=%d GY=%d GZ=%d\r\n", ax, ay, az, gx, gy, gz);
-	  HAL_Delay(500);
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -281,6 +253,51 @@ static void MX_SPI1_Init(void)
   /* USER CODE BEGIN SPI1_Init 2 */
 
   /* USER CODE END SPI1_Init 2 */
+
+}
+
+/**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 1600-1;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 100-1;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
 
 }
 
