@@ -53,6 +53,8 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 volatile int16_t ax, ay, az;
 volatile int16_t gx, gy, gz;
+
+volatile uint8_t data_ready_flag = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -79,6 +81,26 @@ int _write(int file, char *ptr, int len)
 {
     HAL_UART_Transmit(&huart2, (uint8_t*)ptr, len, HAL_MAX_DELAY);
     return len;
+}
+
+void ICM20948_ReadAxes(void)
+{
+    uint8_t txBuf[15] = {0};
+    uint8_t rxBuf[15] = {0};
+
+    txBuf[0] = 0x2D | 0x80;
+
+    HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_RESET);
+    HAL_SPI_TransmitReceive(&hspi1, txBuf, rxBuf, 15, 100);
+    HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_SET);
+
+    ax = (int16_t)((rxBuf[1] << 8) | rxBuf[2]);
+    ay = (int16_t)((rxBuf[3] << 8) | rxBuf[4]);
+    az = (int16_t)((rxBuf[5] << 8) | rxBuf[6]);
+
+    gx = (int16_t)((rxBuf[9] << 8) | rxBuf[10]);
+    gy = (int16_t)((rxBuf[11] << 8) | rxBuf[12]);
+    gz = (int16_t)((rxBuf[13] << 8) | rxBuf[14]);
 }
 /* USER CODE END 0 */
 
@@ -164,6 +186,8 @@ int main(void)
 
     HAL_Delay(100);
 
+    HAL_TIM_Base_Start_IT(&htim2);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -171,7 +195,12 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+	  if (data_ready_flag == 1) {
+		  data_ready_flag = 0;
 
+		  ICM20948_ReadAxes();
+		  printf("AX=%d AY=%d AZ=%d GX=%d GY=%d GZ=%d\r\n", ax, ay, az, gx, gy, gz);
+	  }
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -366,6 +395,12 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+	if (htim->Instance == TIM2) {
+		data_ready_flag = 1; // Flip flag if TIM2 turns off
+	}
+}
 
 /* USER CODE END 4 */
 
