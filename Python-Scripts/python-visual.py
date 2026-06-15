@@ -50,6 +50,11 @@ if __name__ == '__main__':
         # Flush garbage data in buffer during startup
         ser.reset_input_buffer()
 
+        # Gyroscope bias offsets (calibrated using gyro-calibrate.py)
+        GX_BIAS = -1.4902
+        GY_BIAS = 0.0167
+        GZ_BIAS = 27.3976
+
         while True:
             # Read a full line of text until it hits '\n'
             if ser.in_waiting > 0:
@@ -60,13 +65,18 @@ if __name__ == '__main__':
 
                 if parsed_data:
                     ax, ay, az, gx, gy, gz = parsed_data
+
+                    gx_calibrated = gx - GX_BIAS
+                    gy_calibrated = gy - GY_BIAS
+                    gz_calibrated = gz - GZ_BIAS
+
                     sock.sendto(f"Accel_X:{ax:.2f}".encode(), ("127.0.0.1", 47269))
                     sock.sendto(f"Accel_Y:{ay:.2f}".encode(), ("127.0.0.1", 47269))
                     sock.sendto(f"Accel_Z:{az:.2f}".encode(), ("127.0.0.1", 47269))
 
-                    sock.sendto(f"Gyro_X:{gx:.2f}".encode(), ("127.0.0.1", 47269))
-                    sock.sendto(f"Gyro_Y:{gy:.2f}".encode(), ("127.0.0.1", 47269))
-                    sock.sendto(f"Gyro_Z:{gz:.2f}".encode(), ("127.0.0.1", 47269))
+                    sock.sendto(f"Gyro_X:{gx_calibrated:.2f}".encode(), ("127.0.0.1", 47269))
+                    sock.sendto(f"Gyro_Y:{gy_calibrated:.2f}".encode(), ("127.0.0.1", 47269))
+                    sock.sendto(f"Gyro_Z:{gz_calibrated:.2f}".encode(), ("127.0.0.1", 47269))
 
     except serial.SerialException as e:
         print(f"Error opening serial port: {e}")
