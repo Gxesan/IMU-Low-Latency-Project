@@ -188,6 +188,48 @@ int main(void)
 
     HAL_TIM_Base_Start_IT(&htim2);
 
+    // Wake up the sensor (Bank 0, Reg 0x06)
+      txBuf[0] = 0x06;
+      txBuf[1] = 0x01;
+      HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_RESET);
+      HAL_SPI_Transmit(&hspi1, txBuf, 2, 100);
+      HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_SET);
+      HAL_Delay(50);
+
+      // Switch to Bank 2 to access filter settings
+      txBuf[0] = 0x7F;
+      txBuf[1] = 0x20; // 0x20 = Bank 2
+      HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_RESET);
+      HAL_SPI_Transmit(&hspi1, txBuf, 2, 100);
+      HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_SET);
+      HAL_Delay(10);
+
+      // Turn on Accelerometer DLPF (bandwidth approx 11Hz)
+      txBuf[0] = 0x14;
+      txBuf[1] = 0x29;
+      HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_RESET);
+      HAL_SPI_Transmit(&hspi1, txBuf, 2, 100);
+      HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_SET);
+      HAL_Delay(10);
+
+      // Turn on Gyroscope DLPF (bandwidth approx 12Hz)
+      txBuf[0] = 0x01;
+      txBuf[1] = 0x29;
+      HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_RESET);
+      HAL_SPI_Transmit(&hspi1, txBuf, 2, 100);
+      HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_SET);
+      HAL_Delay(10);
+
+      // Switch BACK to Bank 0
+      txBuf[0] = 0x7F;
+      txBuf[1] = 0x00;
+      HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_RESET);
+      HAL_SPI_Transmit(&hspi1, txBuf, 2, 100);
+      HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_SET);
+      HAL_Delay(10);
+
+      HAL_TIM_Base_Start_IT(&htim2); // Starts timer
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
