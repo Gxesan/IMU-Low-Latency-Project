@@ -51,12 +51,12 @@ if __name__ == '__main__':
         ser.reset_input_buffer()
 
         # Accelerometer and Gyroscope bias offsets (calibrated using IMU-calibrate.py)
-        AX_BIAS = 0.0076
-        AY_BIAS = -0.0681
-        AZ_BIAS = -2.1057
-        GX_BIAS = -1.4902
-        GY_BIAS = 0.0167
-        GZ_BIAS = 27.3976
+        AX_BIAS = -0.0401
+        AY_BIAS = -0.0671
+        AZ_BIAS = -2.1047
+        GX_BIAS = -1.2682
+        GY_BIAS = -1.3128
+        GZ_BIAS = -0.0054
 
         while True:
             # Read a full line of text until it hits '\n'

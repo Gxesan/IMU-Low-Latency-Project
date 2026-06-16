@@ -33,7 +33,6 @@ def parse_imu_data(line):
 
 def run_calibration():
     print("--- Full IMU Calibration Tool ---")
-    print("CRITICAL: The sensor MUST be perfectly flat and still on the breadboard!")
     
     try:
         ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
