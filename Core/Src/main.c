@@ -98,9 +98,9 @@ void ICM20948_ReadAxes(void)
     ay = (int16_t)((rxBuf[3] << 8) | rxBuf[4]);
     az = (int16_t)((rxBuf[5] << 8) | rxBuf[6]);
 
-    gx = (int16_t)((rxBuf[9] << 8) | rxBuf[10]);
-    gy = (int16_t)((rxBuf[11] << 8) | rxBuf[12]);
-    gz = (int16_t)((rxBuf[13] << 8) | rxBuf[14]);
+    gx = (int16_t)((rxBuf[7] << 8) | rxBuf[8]);
+    gy = (int16_t)((rxBuf[9] << 8) | rxBuf[10]);
+    gz = (int16_t)((rxBuf[11] << 8) | rxBuf[12]);
 }
 /* USER CODE END 0 */
 
