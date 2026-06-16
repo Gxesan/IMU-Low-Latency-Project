@@ -1,0 +1,108 @@
+import serial
+import time
+
+SERIAL_PORT = 'COM5'
+BAUD_RATE = 115200
+
+ACCEL_SCALE = 16384.0
+GYRO_SCALE = 131.0     
+
+def parse_imu_data(line):
+    try:
+        parts = line.strip().split()
+        if len(parts) != 6:
+            return None
+        
+        ax_raw = int(parts[0].split('=')[1])
+        ay_raw = int(parts[1].split('=')[1])
+        az_raw = int(parts[2].split('=')[1])
+        gx_raw = int(parts[3].split('=')[1])
+        gy_raw = int(parts[4].split('=')[1])
+        gz_raw = int(parts[5].split('=')[1])
+
+        ax = ax_raw / ACCEL_SCALE
+        ay = ay_raw / ACCEL_SCALE
+        az = az_raw / ACCEL_SCALE
+        gx = gx_raw / GYRO_SCALE
+        gy = gy_raw / GYRO_SCALE
+        gz = gz_raw / GYRO_SCALE
+        
+        return ax, ay, az, gx, gy, gz
+    except Exception as e:
+        return None
+
+def run_calibration():
+    print("--- Full IMU Calibration Tool ---")
+    print("CRITICAL: The sensor MUST be perfectly flat and still on the breadboard!")
+    
+    try:
+        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
+        ser.reset_input_buffer()
+        
+        
+        target_samples = 500
+        print(f"Reading {target_samples} samples (approx 5 seconds)...\n")
+        time.sleep(5)
+
+        ax_sum = ay_sum = az_sum = 0.0
+        gx_sum = gy_sum = gz_sum = 0.0
+        samples_collected = 0
+
+        while samples_collected < target_samples:
+            if ser.in_waiting > 0:
+                raw_line = ser.readline().decode('utf-8', errors='ignore')
+                parsed_data = parse_imu_data(raw_line)
+
+                if parsed_data:
+                    ax, ay, az, gx, gy, gz = parsed_data
+                    
+                    ax_sum += ax
+                    ay_sum += ay
+                    az_sum += az
+                    gx_sum += gx
+                    gy_sum += gy
+                    gz_sum += gz
+                    
+                    samples_collected += 1
+                    
+                    if samples_collected % 50 == 0:
+                        print(f"[{samples_collected}/{target_samples}] samples read...")
+
+        # --- Calculate Averages ---
+        ax_avg = ax_sum / target_samples
+        ay_avg = ay_sum / target_samples
+        az_avg = az_sum / target_samples
+        
+        gx_avg = gx_sum / target_samples
+        gy_avg = gy_sum / target_samples
+        gz_avg = gz_sum / target_samples
+
+        # --- Calculate the Bias ---
+        # Gyro should be 0.0
+        gx_bias = gx_avg
+        gy_bias = gy_avg
+        gz_bias = gz_avg
+        
+        # Accel X/Y should be 0.0, Accel Z should be 1.0 (Earth's Gravity)
+        ax_bias = ax_avg
+        ay_bias = ay_avg
+        az_bias = az_avg - 1.0 # Subtracting the 1G force!
+
+        print("\n--- Calibration Complete! ---")
+        print("---------------------------------------------------")
+        print(f"AX_BIAS = {ax_bias:.4f}")
+        print(f"AY_BIAS = {ay_bias:.4f}")
+        print(f"AZ_BIAS = {az_bias:.4f}")
+        print(f"GX_BIAS = {gx_bias:.4f}")
+        print(f"GY_BIAS = {gy_bias:.4f}")
+        print(f"GZ_BIAS = {gz_bias:.4f}")
+        print("---------------------------------------------------")
+
+    except serial.SerialException as e:
+        print(f"Hardware Error: {e}")
+    finally:
+        if 'ser' in locals() and ser.is_open:
+            ser.close()
+
+if __name__ == '__main__':
+    run_calibration()

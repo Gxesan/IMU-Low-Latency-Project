@@ -50,7 +50,10 @@ if __name__ == '__main__':
         # Flush garbage data in buffer during startup
         ser.reset_input_buffer()
 
-        # Gyroscope bias offsets (calibrated using gyro-calibrate.py)
+        # Accelerometer and Gyroscope bias offsets (calibrated using IMU-calibrate.py)
+        AX_BIAS = 0.0076
+        AY_BIAS = -0.0681
+        AZ_BIAS = -2.1057
         GX_BIAS = -1.4902
         GY_BIAS = 0.0167
         GZ_BIAS = 27.3976
@@ -66,13 +69,16 @@ if __name__ == '__main__':
                 if parsed_data:
                     ax, ay, az, gx, gy, gz = parsed_data
 
+                    ax_calibrated = ax - AX_BIAS
+                    ay_calibrated = ay - AY_BIAS
+                    az_calibrated = az - AZ_BIAS
                     gx_calibrated = gx - GX_BIAS
                     gy_calibrated = gy - GY_BIAS
                     gz_calibrated = gz - GZ_BIAS
 
-                    sock.sendto(f"Accel_X:{ax:.2f}".encode(), ("127.0.0.1", 47269))
-                    sock.sendto(f"Accel_Y:{ay:.2f}".encode(), ("127.0.0.1", 47269))
-                    sock.sendto(f"Accel_Z:{az:.2f}".encode(), ("127.0.0.1", 47269))
+                    sock.sendto(f"Accel_X:{ax_calibrated:.2f}".encode(), ("127.0.0.1", 47269))
+                    sock.sendto(f"Accel_Y:{ay_calibrated:.2f}".encode(), ("127.0.0.1", 47269))
+                    sock.sendto(f"Accel_Z:{az_calibrated:.2f}".encode(), ("127.0.0.1", 47269))
 
                     sock.sendto(f"Gyro_X:{gx_calibrated:.2f}".encode(), ("127.0.0.1", 47269))
                     sock.sendto(f"Gyro_Y:{gy_calibrated:.2f}".encode(), ("127.0.0.1", 47269))
