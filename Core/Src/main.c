@@ -206,7 +206,7 @@ int main(void)
 
       // Turn on Accelerometer DLPF (bandwidth approx 11Hz)
       txBuf[0] = 0x14;
-      txBuf[1] = 0x29;
+      txBuf[1] = 0x21;
       HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_RESET);
       HAL_SPI_Transmit(&hspi1, txBuf, 2, 100);
       HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_SET);
@@ -214,7 +214,7 @@ int main(void)
 
       // Turn on Gyroscope DLPF (bandwidth approx 12Hz)
       txBuf[0] = 0x01;
-      txBuf[1] = 0x29;
+      txBuf[1] = 0x21;
       HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_RESET);
       HAL_SPI_Transmit(&hspi1, txBuf, 2, 100);
       HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_SET);
