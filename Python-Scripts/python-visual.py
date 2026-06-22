@@ -1,13 +1,21 @@
 import serial
-import struct
 import time
 import socket
+import math
 
 SERIAL_PORT = 'COM5'
 BAUD_RATE = 115200
 
 ACCEL_SCALE = 16384.0  # Assuming accelerometer range is ±2g
 GYRO_SCALE = 131.0     # Assuming gyroscope range is ±250°/s
+
+# Accelerometer and Gyroscope bias offsets (calibrated using IMU-calibrate.py)
+AX_BIAS = -0.0401
+AY_BIAS = -0.0671
+AZ_BIAS = -0.1047
+GX_BIAS = -1.2682
+GY_BIAS = -1.3128
+GZ_BIAS = -0.0054
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -50,13 +58,12 @@ if __name__ == '__main__':
         # Flush garbage data in buffer during startup
         ser.reset_input_buffer()
 
-        # Accelerometer and Gyroscope bias offsets (calibrated using IMU-calibrate.py)
-        AX_BIAS = -0.0401
-        AY_BIAS = -0.0671
-        AZ_BIAS = -2.1047
-        GX_BIAS = -1.2682
-        GY_BIAS = -1.3128
-        GZ_BIAS = -0.0054
+        pitch_est = 0.0
+        roll_est = 0.0
+
+        last_time = time.time()
+
+        FTP = 0.98 # FTP = Filter Tuning Parameter
 
         while True:
             # Read a full line of text until it hits '\n'
@@ -69,6 +76,15 @@ if __name__ == '__main__':
                 if parsed_data:
                     ax, ay, az, gx, gy, gz = parsed_data
 
+                    # Delta time calculation
+                    current_time = time.time()
+                    dt = current_time - last_time
+                    last_time = current_time
+
+                    # Pure accelerometer angle calculations
+                    accel_pitch = math.degrees(math.atan2(-ax, math.sqrt(ay**2 + az**2)))
+                    accel_roll = math.degrees(math.atan2(ay, az))
+
                     ax_calibrated = ax - AX_BIAS
                     ay_calibrated = ay - AY_BIAS
                     az_calibrated = az - AZ_BIAS
@@ -76,13 +92,13 @@ if __name__ == '__main__':
                     gy_calibrated = gy - GY_BIAS
                     gz_calibrated = gz - GZ_BIAS
 
-                    sock.sendto(f"Accel_X:{ax_calibrated:.2f}".encode(), ("127.0.0.1", 47269))
-                    sock.sendto(f"Accel_Y:{ay_calibrated:.2f}".encode(), ("127.0.0.1", 47269))
-                    sock.sendto(f"Accel_Z:{az_calibrated:.2f}".encode(), ("127.0.0.1", 47269))
+                    pitch_est = FTP * (pitch_est + (gy * dt)) + (1.0 - FTP) * accel_pitch
+                    roll_est = FTP * (roll_est + (gx * dt)) + (1.0 - FTP) *accel_roll
 
-                    sock.sendto(f"Gyro_X:{gx_calibrated:.2f}".encode(), ("127.0.0.1", 47269))
-                    sock.sendto(f"Gyro_Y:{gy_calibrated:.2f}".encode(), ("127.0.0.1", 47269))
-                    sock.sendto(f"Gyro_Z:{gz_calibrated:.2f}".encode(), ("127.0.0.1", 47269))
+
+                    sock.sendto(f"Pitch_Est:{pitch_est:.2f}".encode(), ("127.0.0.1", 47269))
+                    sock.sendto(f"Roll_Est:{roll_est:.2f}".encode(), ("127.0.0.1", 47269))
+
 
     except serial.SerialException as e:
         print(f"Error opening serial port: {e}")
