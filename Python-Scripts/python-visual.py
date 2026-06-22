@@ -63,7 +63,7 @@ if __name__ == '__main__':
 
         last_time = time.time()
 
-        FTP = 0.98 # FTP = Filter Tuning Parameter
+        FTP = 0.94 # FTP = Filter Tuning Parameter
 
         while True:
             # Read a full line of text until it hits '\n'
