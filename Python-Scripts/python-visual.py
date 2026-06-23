@@ -4,7 +4,7 @@ import socket
 import math
 
 SERIAL_PORT = 'COM5'
-BAUD_RATE = 115200
+BAUD_RATE = 921600
 
 ACCEL_SCALE = 16384.0  # Assuming accelerometer range is ±2g
 GYRO_SCALE = 131.0     # Assuming gyroscope range is ±250°/s
