@@ -157,19 +157,18 @@ int main(void)
 
     HAL_Delay(100);
 
-    // 3. Read WHO_AM_I (The Bulletproof Continuous Way)
+    // 3. Read WHO_AM_I
     HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_RESET);
-    HAL_Delay(1); // 1ms breathing room
+    HAL_Delay(1);
 
     txBuf[0] = 0x80;
-    txBuf[1] = 0x00; // Dummy byte to keep the clock running
+    txBuf[1] = 0x00;
 
-    // Send and listen simultaneously! No gaps!
     HAL_SPI_TransmitReceive(&hspi1, txBuf, rxBuf, 2, 100);
 
     HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_SET);
 
-    // 4. Print the result
+    // 4. Print WHO AM I
     data = rxBuf[1];
     printf("Who am I: 0x%X \r\n", data);
 
@@ -188,7 +187,7 @@ int main(void)
 
     HAL_TIM_Base_Start_IT(&htim2);
 
-    // Wake up the sensor (Bank 0, Reg 0x06)
+      // Wake up the sensor (Bank 0, Reg 0x06)
       txBuf[0] = 0x06;
       txBuf[1] = 0x01;
       HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_RESET);
@@ -204,7 +203,7 @@ int main(void)
       HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_SET);
       HAL_Delay(10);
 
-      // Turn on Accelerometer DLPF (bandwidth approx 11Hz)
+      // Turn on Accelerometer DLPF (bandwidth approx 24Hz)
       txBuf[0] = 0x14;
       txBuf[1] = 0x21;
       HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_RESET);
@@ -212,7 +211,7 @@ int main(void)
       HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_SET);
       HAL_Delay(10);
 
-      // Turn on Gyroscope DLPF (bandwidth approx 12Hz)
+      // Turn on Gyroscope DLPF (bandwidth approx 24Hz)
       txBuf[0] = 0x01;
       txBuf[1] = 0x21;
       HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_RESET);
@@ -236,6 +235,22 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  if (data_ready_flag == 1) {
+		  data_ready_flag = 0;
+
+		  ICM20948_ReadAxes();
+		  uint_8 txData[14];
+		  txData[0] = 0xAA;
+		  txData[1] = 0xBB;
+		  txData[2] = (ax >> 8) & 0xFF; txData[3] = ax & 0xFF;
+		  txData[4] = (ay >> 8) & 0xFF; txData[5] = ay & 0xFF;
+		  txData[6] = (az >> 8) & 0xFF; txData[7] = az & 0xFF;
+		  txData[8] = (gx >> 8) & 0xFF; txData[9] = gx & 0xFF;
+		  txData[10] = (gy >> 8) & 0xFF; txData[11] = gy & 0xFF;
+		  txData[12] = (gz >> 8) & 0xFF; txData[13] = gz & 0xFF;
+
+		  HAL_UART_Transmit(&huart2, txData, 14, 10);
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
