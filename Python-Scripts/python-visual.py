@@ -4,7 +4,7 @@ import socket
 import math
 
 SERIAL_PORT = 'COM5'
-BAUD_RATE = 115200
+BAUD_RATE = 921600
 
 ACCEL_SCALE = 16384.0  # Assuming accelerometer range is ±2g
 GYRO_SCALE = 131.0     # Assuming gyroscope range is ±250°/s
@@ -17,46 +17,48 @@ GX_BIAS = -1.2682
 GY_BIAS = -1.3128
 GZ_BIAS = -0.0054
 
+UDP_IP = "127.0.0.1"
+UDP_PORT = 47269
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-def parse_sensor_data(line):
+def send_to_teleplot(name, value):
+    msg = f"{name}:{value}\n"
+    sock.sendto(msg.encode(), (UDP_IP, UDP_PORT))
+    
+def read_IMU(ser):
+    try: # Looks for 0xAA and 0xBB (Sync Header)
+        while True:
+            if ser.in_waiting > 0:
+                byte1 = ser.read(1)
+                if byte1 == 'b\xAA':
+                    byte2 = ser.read(1)
+                    if byte2 == 'b\xBB':
+                        break
 
-    try:
-        parts = line.strip().split() # Clean the string and seperate by spaces
-
-        # Ensure exactly 6 pieces of data were received
-        if len(parts) != 6:
+        payload = ser.read(12) # Grabs 12-Byte payload following the sync header
+        if len(payload) != 12:
             return None
-        
-        # Extract the numbers (Split by = and grab second part)
-        ax_raw = int(parts[0].split('=')[1])
-        ay_raw = int(parts[1].split('=')[1])
-        az_raw = int(parts[2].split('=')[1])
-        gx_raw = int(parts[3].split('=')[1])
-        gy_raw = int(parts[4].split('=')[1])
-        gz_raw = int(parts[5].split('=')[1])
-
-        accel_x = ax_raw / ACCEL_SCALE
-        accel_y = ay_raw / ACCEL_SCALE
-        accel_z = az_raw / ACCEL_SCALE
-
-        gyro_x = gx_raw / GYRO_SCALE
-        gyro_y = gy_raw / GYRO_SCALE
-        gyro_z = gz_raw / GYRO_SCALE
-        return accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z
     
-    except Exception as e:
-        # Don't crash if corrupted line goes through
+        ax_raw, ay_raw, az_raw, gx_raw, gy_raw, gz_raw = struct.unpack('>hhhhhh', payload)
+        # Accelerometer value calculations
+        ax = (ax_raw / ACCEL_SCALE) - AX_BIAS 
+        ay = (ay_raw / ACCEL_SCALE) - AY_BIAS 
+        az = (az_raw / ACCEL_SCALE) - AZ_BIAS 
+
+        gx = (gx_raw / GYRO_SCALE) - GX_BIAS 
+        gy = (gy_raw / GYRO_SCALE) - GY_BIAS 
+        gz = (gz_raw / GYRO_SCALE) - GZ_BIAS 
+
+        return ax, ay, az, gx, gy, gz
+    except Exception:
         return None
-    
+
 if __name__ == '__main__':
     try:
         # Open serial port
         ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
         print(f"Connected to {SERIAL_PORT} at {BAUD_RATE} baud.")
 
-        # Flush garbage data in buffer during startup
-        ser.reset_input_buffer()
 
         pitch_est = 0.0
         roll_est = 0.0
@@ -67,37 +69,28 @@ if __name__ == '__main__':
 
         while True:
             # Read a full line of text until it hits '\n'
-            if ser.in_waiting > 0:
-                raw_line = ser.readline().decode('utf-8', errors = 'ignore')
 
-                # Parse data
-                parsed_data = parse_sensor_data(raw_line)
+            parsed_data = read_IMU(ser)
 
-                if parsed_data:
-                    ax, ay, az, gx, gy, gz = parsed_data
+            if parsed_data:
+                ax, ay, az, gx, gy, gz = parsed_data
 
-                    # Delta time calculation
-                    current_time = time.time()
-                    dt = current_time - last_time
-                    last_time = current_time
+                # Delta time calculation
+                current_time = time.time()
+                dt = current_time - last_time
+                last_time = current_time
 
-                    # Pure accelerometer angle calculations
-                    accel_pitch = math.degrees(math.atan2(-ax, math.sqrt(ay**2 + az**2)))
-                    accel_roll = math.degrees(math.atan2(ay, az))
-
-                    ax_calibrated = ax - AX_BIAS
-                    ay_calibrated = ay - AY_BIAS
-                    az_calibrated = az - AZ_BIAS
-                    gx_calibrated = gx - GX_BIAS
-                    gy_calibrated = gy - GY_BIAS
-                    gz_calibrated = gz - GZ_BIAS
-
-                    pitch_est = FTP * (pitch_est + (gy * dt)) + (1.0 - FTP) * accel_pitch
-                    roll_est = FTP * (roll_est + (gx * dt)) + (1.0 - FTP) *accel_roll
+                # Pure accelerometer angle calculations
+                accel_pitch = math.degrees(math.atan2(-ax, math.sqrt(ay**2 + az**2)))
+                accel_roll = math.degrees(math.atan2(ay, az))
 
 
-                    sock.sendto(f"Pitch_Est:{pitch_est:.2f}".encode(), ("127.0.0.1", 47269))
-                    sock.sendto(f"Roll_Est:{roll_est:.2f}".encode(), ("127.0.0.1", 47269))
+                pitch_est = FTP * (pitch_est + (gy * dt)) + (1.0 - FTP) * accel_pitch
+                roll_est = FTP * (roll_est + (gx * dt)) + (1.0 - FTP) *accel_roll
+
+                # Send pitch and roll estimation values to teleplot
+                send_to_teleplot("Pitch", pitch_est)
+                send_to_teleplot("Roll", roll_est)
 
 
     except serial.SerialException as e:
