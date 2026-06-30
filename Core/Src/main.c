@@ -238,10 +238,16 @@ int main(void)
 	  if (data_ready_flag == 1) {
 		  data_ready_flag = 0;
 
-		  ICM20948_ReadAxes();
-		  uint_8 txData[14];
+		  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET); // Start stopwatch, turning on PA5
+
+		  ICM20948_ReadAxes(); // Read raw data from IMU via SPI
+
+		  uint8_t txData[14];
+
+		  // Sync header
 		  txData[0] = 0xAA;
 		  txData[1] = 0xBB;
+
 		  txData[2] = (ax >> 8) & 0xFF; txData[3] = ax & 0xFF;
 		  txData[4] = (ay >> 8) & 0xFF; txData[5] = ay & 0xFF;
 		  txData[6] = (az >> 8) & 0xFF; txData[7] = az & 0xFF;
@@ -249,7 +255,9 @@ int main(void)
 		  txData[10] = (gy >> 8) & 0xFF; txData[11] = gy & 0xFF;
 		  txData[12] = (gz >> 8) & 0xFF; txData[13] = gz & 0xFF;
 
-		  HAL_UART_Transmit(&huart2, txData, 14, 10);
+		  HAL_UART_Transmit(&huart2, txData, 14, 10); // Send binary over UART
+
+		  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET); // Stop stopwatch
 	  }
     /* USER CODE END WHILE */
 
