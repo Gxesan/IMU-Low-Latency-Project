@@ -2,6 +2,7 @@ import serial
 import time
 import socket
 import math
+import struct
 
 SERIAL_PORT = 'COM5'
 BAUD_RATE = 921600
@@ -30,9 +31,9 @@ def read_IMU(ser):
         while True:
             if ser.in_waiting > 0:
                 byte1 = ser.read(1)
-                if byte1 == 'b\xAA':
+                if byte1 == b'\xAA':
                     byte2 = ser.read(1)
-                    if byte2 == 'b\xBB':
+                    if byte2 == b'\xBB':
                         break
 
         payload = ser.read(12) # Grabs 12-Byte payload following the sync header
@@ -50,7 +51,8 @@ def read_IMU(ser):
         gz = (gz_raw / GYRO_SCALE) - GZ_BIAS 
 
         return ax, ay, az, gx, gy, gz
-    except Exception:
+    except Exception as e:
+        print(f"Parsing Error: {e}")
         return None
 
 if __name__ == '__main__':
