@@ -41,7 +41,7 @@ Starting from week 7, the goal is to record the latency values, comparing them t
 | ASCII (sprintf)  | 921600  | 40 - 50 | 0.883 | 72.8   |
 | Binary           | 921600  | 14   | 0.420 | 87.0
 
-### ** Week 8**
+### **Week 8**
 The first goal of week 8 was to split the MCU execution latency measurements into the three stages listed above: SPI read, data processing, and UART transmission. To achieve that, I used three different GPIO pins to measure each stage, turning it on and off at the correct position in the infinite while loop. Further hardware connections also had to be made, as two more pins had to be connected to two more channels of the oscilloscope. Below are the results attained:
 1. SPI Read → 243.8 μs
 2. Data Processing → 9.2 μs
