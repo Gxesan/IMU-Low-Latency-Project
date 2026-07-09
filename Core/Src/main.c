@@ -247,7 +247,7 @@ int main(void)
 		  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); // Stop stopwatch to measure SPI read time
 
 
-		  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); // Start stopwatch again
+		  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET); // Start stopwatch again
 		  uint8_t txData[14];
 
 		  // Sync header
@@ -261,15 +261,15 @@ int main(void)
 		  txData[10] = (gy >> 8) & 0xFF; txData[11] = gy & 0xFF;
 		  txData[12] = (gz >> 8) & 0xFF; txData[13] = gz & 0xFF;
 
-		  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); // Stop stopwatch to formatting time
+		  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET); // Stop stopwatch to formatting time
 
-		  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET); // Start stopwatch again
+		  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET); // Start stopwatch again
 
 		  __HAL_UART_CLEAR_FLAG(&huart2, UART_FLAG_TC); // Ensures clean state and transmit by polling
 
 		  HAL_UART_Transmit(&huart2, txData, 14, 10); // Send binary over UART
 
-		  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); // Stop stopwatch to measure UART transmit time
+		  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET); // Stop stopwatch to measure UART transmit time
 
 
 
