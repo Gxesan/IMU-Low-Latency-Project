@@ -22,6 +22,24 @@ Below is the pipeline through which the system processes motion data:
 5. Python backend: A Python script converts the binary stream and estimates pitch and roll after calibration, and a complementary filter is applied
 6. UDP Teleplot: The calculated results are sent to Teleplot for real-time graphing via UDP
 
+## **Repository Structure**
+- /Core/Src → Contains main.c that has STM32CubeMX settings and C source code
+- /Python-Scripts → Contains a Python script that calibrates the IMU and the visualization script
+
+## **How to Run**
+### **Required software:**
+1. STM32CubeIDE
+2. STM32CubeMX
+3. Python 3
+4. Teleplot (on web client or VSCode)
+
+### **Setup Instructions**
+1. Flash the STM32 board with main.c
+2. Install the required Python libaries using: pip install pyserial
+3. Open Teleplot and configure it to listen to UDP port 47269
+4. Run the Python visualization script
+5. Move the IMU to see real-time pitch and roll estimation
+
 ## **Weekly Progress Log**
 ### **Week 1**
 The main goal of week 1 was to configure SPI and read the WHO_AM_I register successfully. Initial problems encountered were WHO_AM_I returning incorrect values and the printf feature on the IDE not functioning. The correct value of WHO_AM_I was returned after realizing improper soldering of pins on the IMU and correcting debug optimization settings on the IDE itself.
