@@ -13,6 +13,14 @@ In this project, the exact “latency” that was measured was MCU execution lat
 - Digilent Breadboard
 - Oscilloscope: Digilent Analog Discovery 3
 
+## **System Architecture & Data Flow**
+Below is the pipeline through which the system processes motion data:
+1. Physical Motion: Changes in acceleration and rotation are detected by the ICM-20948 IMU's accelerometer and gyroscope
+2. SPI Read: The STM32 board reads the raw sensor registers via SPI
+3. MCU Processing: The STM32 converts raw data into a 14-byte binary payload
+4. UART-to-USB: The binary payload is transmitted to the ST-LINK USB Bridge
+5. Python backend: A Python script converts the binary stream and estimates pitch and roll after calibration, and a complementary filter is applied
+6. UDP Teleplot: The calculated results are sent to Teleplot for real-time graphing via UDP
 
 ## **Weekly Progress Log**
 ### **Week 1**
