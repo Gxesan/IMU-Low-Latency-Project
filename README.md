@@ -74,3 +74,6 @@ The first goal of week 8 was to split the MCU execution latency measurements int
 3. UART Transmission → 173.8 μs
 
 The results above show a higher latency compared to the mean latency that was measured when the MCU execution latency was measured as a whole. This is most likely due to the "Observer Effect", also known as Instrumentation Overhead. When the total latency was measured, the pin's stopwatch only had to be turned on and off once, while measuring separately required the pins' stopwatches to be toggled three times. The act of toggling a pin's stopwatch also involves latency from the CPU (about 1.5 μs), which explains the small increase in latency when measured separately. 
+
+### **Week 9**
+Week 9's time was spent on moving the complementary filter from the Python visualization script onto main.c. There are several advantages to this. Firstly, the dt calculations in the Python script would not be a fixed value, as it would differ depending on the state of the OS the program is being run from. However, the STM32 hardware timer triggers every 10ms, which makes the dt value a fixed value, making the filter more accurate. Additionally, the payload shrinks from 14 bytes to 10 bytes, as it no longer sends all the accelerometer and gyroscope measurements and instead just sends the final pitch and roll estimations. 
