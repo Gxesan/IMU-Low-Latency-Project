@@ -138,7 +138,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
   	uint8_t txBuf[2];
     uint8_t rxBuf[2];
     uint8_t data;
@@ -230,6 +230,27 @@ int main(void)
 
       HAL_TIM_Base_Start_IT(&htim2); // Starts timer
 
+      HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+      const float ACCEL_SCALE = 16384.0f; // Assuming accelerometer range is ±2g
+      const float GYRO_SCALE = 131.0f; // Assuming gyroscope range is ±250°/s
+
+      // Acceleration and Gyroscope bias offsets
+      const float AX_BIAS = -0.0401f;
+      const float AY_BIAS = -0.0671f;
+      const float AZ_BIAS = -0.1048f;
+
+      const float GX_BIAS = -1.2682f;
+      const float GY_BIAS = -1.3128f;
+      // const float GZ_BIAS = -0.0054f; // GZ is not used for pitch and roll calculations
+
+      const float FTP = 0.94f; // FTP = Filter Tuning Parameter
+      const float DT = 0.01f;
+      const float RAD_TO_DEG = 180.0f / (float)M_PI;
+
+      float pitch_est = 0.0f;
+      float roll_est = 0.0f;
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -244,28 +265,33 @@ int main(void)
 
 		  ICM20948_ReadAxes(); // Read raw data from IMU via SPI
 
-		  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); // Stop stopwatch to measure SPI read time
+		  // Sensor fusion math
+		  float ax_g = (ax / ACCEL_SCALE) - AX_BIAS;
+		  float ay_g = (ay / ACCEL_SCALE) - AY_BIAS;
+		  float az_g = (az / ACCEL_SCALE) - AZ_BIAS;
 
+		  float gx_g = (gx / GYRO_SCALE) - GX_BIAS;
+		  float gy_g = (gy / ACCEL_SCALE) - GY_BIAS;
+		  // float gz_g = (gz / ACCEL_SCALE) - GZ_BIAS; // Nevermind, it wasn't needed for pitch and roll estimations
 
-		  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET); // Start stopwatch again
-		  uint8_t txData[14];
+		  // Pure accelerometer angles
+		  float accel_pitch = atan2f(-ax_g, sqrtf(ay_g * ay_g + az_g * az_g)) * RAD_TO_DEG;
+		  float accel_roll  = atan2f(ay_g, az_g) * RAD_TO_DEG;
+
+		  // Complementary Filter
+		  pitch_est = pitch_est = FTP * (pitch_est + (gy_g * DT)) + (1.0f - FTP) * accel_pitch;
+		  roll_est = FTP * (roll_est + (gx_g * DT)) + (1.0f - FTP) *accel_roll;
+
+		  uint8_t txData[10]; // Now changed from 14 to 10 bytes
 
 		  // Sync header
 		  txData[0] = 0xAA;
 		  txData[1] = 0xBB;
 
-		  txData[2] = (ax >> 8) & 0xFF; txData[3] = ax & 0xFF;
-		  txData[4] = (ay >> 8) & 0xFF; txData[5] = ay & 0xFF;
-		  txData[6] = (az >> 8) & 0xFF; txData[7] = az & 0xFF;
-		  txData[8] = (gx >> 8) & 0xFF; txData[9] = gx & 0xFF;
-		  txData[10] = (gy >> 8) & 0xFF; txData[11] = gy & 0xFF;
-		  txData[12] = (gz >> 8) & 0xFF; txData[13] = gz & 0xFF;
+		  // Copy pitch and roll estimations into the byte array
+		  memcpy(&txData[2], &pitch_est, 4);
+		  memcpy(&txData[6], &roll_est, 4);
 
-		  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET); // Stop stopwatch to formatting time
-
-		  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET); // Start stopwatch again
-
-		  __HAL_UART_CLEAR_FLAG(&huart2, UART_FLAG_TC); // Ensures clean state and transmit by polling
 
 		  HAL_UART_Transmit(&huart2, txData, 14, 10); // Send binary over UART
 
