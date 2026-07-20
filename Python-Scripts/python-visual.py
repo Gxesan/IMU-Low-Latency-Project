@@ -36,21 +36,13 @@ def read_IMU(ser):
                     if byte2 == b'\xBB':
                         break
 
-        payload = ser.read(12) # Grabs 12-Byte payload following the sync header
-        if len(payload) != 12:
+        payload = ser.read(8) # Grabs 8-Byte payload following the sync header
+        if len(payload) != 8:
             return None
     
-        ax_raw, ay_raw, az_raw, gx_raw, gy_raw, gz_raw = struct.unpack('>hhhhhh', payload)
-        # Accelerometer value calculations
-        ax = (ax_raw / ACCEL_SCALE) - AX_BIAS 
-        ay = (ay_raw / ACCEL_SCALE) - AY_BIAS 
-        az = (az_raw / ACCEL_SCALE) - AZ_BIAS 
+        pitch_est, roll_est, = struct.unpack('<ff', payload)
+        return pitch_est, roll_est
 
-        gx = (gx_raw / GYRO_SCALE) - GX_BIAS 
-        gy = (gy_raw / GYRO_SCALE) - GY_BIAS 
-        gz = (gz_raw / GYRO_SCALE) - GZ_BIAS 
-
-        return ax, ay, az, gx, gy, gz
     except Exception as e:
         print(f"Parsing Error: {e}")
         return None
@@ -62,33 +54,13 @@ if __name__ == '__main__':
         print(f"Connected to {SERIAL_PORT} at {BAUD_RATE} baud.")
 
 
-        pitch_est = 0.0
-        roll_est = 0.0
-
-        last_time = time.time()
-
-        FTP = 0.94 # FTP = Filter Tuning Parameter
-
         while True:
             # Read a full line of text until it hits '\n'
 
             parsed_data = read_IMU(ser)
 
             if parsed_data:
-                ax, ay, az, gx, gy, gz = parsed_data
-
-                # Delta time calculation
-                current_time = time.time()
-                dt = current_time - last_time
-                last_time = current_time
-
-                # Pure accelerometer angle calculations
-                accel_pitch = math.degrees(math.atan2(-ax, math.sqrt(ay**2 + az**2)))
-                accel_roll = math.degrees(math.atan2(ay, az))
-
-
-                pitch_est = FTP * (pitch_est + (gy * dt)) + (1.0 - FTP) * accel_pitch
-                roll_est = FTP * (roll_est + (gx * dt)) + (1.0 - FTP) *accel_roll
+                pitch_est, roll_est = parsed_data
 
                 # Send pitch and roll estimation values to teleplot
                 send_to_teleplot("Pitch", pitch_est)
