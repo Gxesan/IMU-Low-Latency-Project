@@ -86,6 +86,14 @@ The results above show a higher latency compared to the mean latency that was me
 Week 9's time was spent on moving the complementary filter from the Python visualization script onto main.c. There are several advantages to this. Firstly, the dt calculations in the Python script would not be a fixed value, as it would differ depending on the state of the OS the program is being run from. However, the STM32 hardware timer triggers every 10ms, which makes the dt value a fixed value, making the filter more accurate. Additionally, the payload shrinks from 14 bytes to 10 bytes, as it no longer sends all the accelerometer and gyroscope measurements and instead just sends the final pitch and roll estimations. Even though the size of the payload decreased from 14 bytes to 10 bytes, the total latency increased due to the fact that complex sensor fusion was added into main.c. Now, the total latency is:
 - **Total Latency: 454.6 μs**
 
+### **Final Results**
+| Optimization | Total Latency (ms) |
+| ------------ | ------------------ |
+| ASCII @ 115200 Bd | 3.223 |
+| ASCII @ 921600 Bd | 0.883 |
+| Binary @ 921600 Bd | 0.420 |
+| Binary w/ On-board Sensor Fusion | 0.455 |
+
 
 ## **Future Improvements**
 ### **Replace Blocking Communication wtih DMA**
