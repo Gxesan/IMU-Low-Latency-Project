@@ -2,13 +2,13 @@
 A UIUC ECE major's embedded systems project
 
 ## **Project Overview**
-This project aims to implement a low-latency IMU-based motion tracking system utilizing Python real-time visualization. The system reads accelerometer and gyroscope data from the IMU, which then sends the data to a PC over USB serial, estimating roll/pitch orientation using a complementary filter.
+This project aims to implement a low-latency IMU-based motion tracking system utilizing Python real-time visualization. This project implements a low-latency IMU tracking system using the STM32F411RE MCU and an ICM-20948 IMU. Motion data are sampled over SPI, which is then processed on the MCU to stream it to a PC over UART-to-USB, and then finally visualized in real time using Python and Teleplot. 
 
 ## **Definition of Latency**
-In this project, the exact “latency” that was measured was MCU execution latency, also commonly known as interrupt latency. MCU execution latency can be defined as the total CPU time consumed from fetching the sensor data to sending it to the PC. Execution time was measured by setting a GPIO pin to high immediately before the SPI sensor started reading data, and it was then turned low as soon as the UART transmission function finished.
+In this project, the exact “latency” that was measured was MCU execution latency. MCU execution latency can be defined as the total CPU time consumed from fetching the sensor data to sending it to the PC. Execution time was measured by setting a GPIO pin to high immediately before the SPI sensor started reading data, and it was then turned low as soon as the UART transmission function finished.
 
 ## **Hardware Components**
-- Embedded System Development Board: STM32 NUCLEO-F411RE
+- Embedded System Development Board: STM32 NUCLEO-F411RE (configured to an internal 16 MHz HSI clock during latency measurements)
 - IMU: ICM-20948
 - Digilent Breadboard
 - Oscilloscope: Digilent Analog Discovery 3
@@ -17,7 +17,7 @@ In this project, the exact “latency” that was measured was MCU execution lat
 Below is the pipeline through which the system processes motion data:
 1. Physical Motion: Changes in acceleration and rotation are detected by the ICM-20948 IMU's accelerometer and gyroscope
 2. SPI Read: The STM32 board reads the raw sensor registers via SPI
-3. MCU Processing: The STM32 converts raw data into a 14-byte binary payload
+3. MCU Processing: The STM32 converts raw data into a 14-byte binary payload (now 10 after sensor fusion moved to main.c)
 4. UART-to-USB: The binary payload is transmitted to the ST-LINK USB Bridge
 5. Python backend: A Python script converts the binary stream and estimates pitch and roll after calibration, and a complementary filter is applied
 6. UDP Teleplot: The calculated results are sent to Teleplot for real-time graphing via UDP
@@ -40,6 +40,11 @@ Below is the pipeline through which the system processes motion data:
 4. Run the Python visualization script
 5. Move the IMU to see real-time pitch and roll estimation
 
+### **Experimental Conditions**
+1. System Clock: 16 MHz (HSI)
+2. SPI Clock: 4 MHz
+3. UART Baud Rate: 115200 Bd or 921600 Bd (depending on the stage of measurement)
+
 ## **Weekly Progress Log**
 ### **Week 1**
 The main goal of week 1 was to configure SPI and read the WHO_AM_I register successfully. Initial problems encountered were WHO_AM_I returning incorrect values and the printf feature on the IDE not functioning. The correct value of WHO_AM_I was returned after realizing improper soldering of pins on the IMU and correcting debug optimization settings on the IDE itself.
@@ -60,12 +65,14 @@ Before moving on to roll and pitch estimation, I decided to filter out the jitte
 Beginning of week 6, I completed the code for roll and pitch estimation. However, with a filter tuning parameter (FTP) of 0.98, I realized that the speed at which the IMU reacts was too sluggish. Hence, after further experimentation with trial and error, the perfect sweet spot FTP I found was 0.94. Moving on to trying to lower the latency as much as possible, I first started with increasing the baud rate to 921600. However, when that was done, I did not realize that regenerating the code through STM32CubeMX actually deleted my while loop code in main.c, as it was not in the user code comments. Hence, I had to rebuild the while loop, and in the process, I changed the format to not use printf and instead send the binary bytes to the Python script. However, the Python script did not seem to be able to pick up data from the IMU after that. The problem was that the Python script had to be updated to search for the sync header instead of raw English text, as I had now removed sprintf from the C code.
 
 ### **Week 7**
-Starting from week 7, the goal is to record the latency values, comparing them to my old code that utilized ASCII format (using sprintf) and a baud rate of 115200 bd, to the improved code setup that uses a higher baud rate of 921600 bd and pure binary to send data. However, when using Waveforms to measure the latency, there were a few problems. The PA8 was shown to be floating, and DIO 1, which received data from UART, was completely flat. Furthermore, Waveforms gave me an error message stating, "Reduce the timebase or increase the sample rate". The sample rate was easily fixed by changing the sample settings in Waveforms from "default" to manually setting it to 2 million samples. The floating PA8 issue was solved after realizing that the pin was uninitialized in the MX_GPIO_Init function, and only PA4 was initialized. Below are the results attained:
+Starting from week 7, the goal is to record the latency values, comparing them to my old code that utilized ASCII format (using sprintf) and a baud rate of 115200 bd, to the improved code setup that uses a higher baud rate of 921600 bd and pure binary to send data. All measurements were performed with the STM32 configured to run at an internal 16 MHz HSI clock. It was left intentionally unchanged so that the measured latency improvements are attributed to software optimizations rather than increased CPU frequency. However, when using Waveforms to measure the latency, there were a few problems. The PA8 was shown to be floating, and DIO 1, which received data from UART, was completely flat. Furthermore, Waveforms gave me an error message stating, "Reduce the timebase or increase the sample rate". The sample rate was easily fixed by changing the sample settings in Waveforms from "default" to manually setting it to 2 million samples. The floating PA8 issue was solved after realizing that the pin was uninitialized in the MX_GPIO_Init function, and only PA4 was initialized. Below are the results attained:
 | Formatting Method  | Baud Rate | Payload Size (Bytes) | Mean Latency (ms) | CPU Time Saved (%) |
 | ------------------ | --------- | -------------------- | ----------------- | ------------------ |
 | ASCII (sprintf)  | 115200  | 40 - 50 | 3.223 | 0      |
 | ASCII (sprintf)  | 921600  | 40 - 50 | 0.883 | 72.8   |
 | Binary           | 921600  | 14   | 0.420 | 87.0
+
+As shown in the results above, we can see that as soon as the formatting method was switched to binary, the mean latency was greatly reduced, even though the hardware power did not change (as the baud rate stayed constant). This is because binary transmission removed the slow and costly ASCII formatting method performed by sprintf, and the payload size was also reduced greatly from 40-50 bytes to 14 bytes.
 
 ### **Week 8**
 The first goal of week 8 was to split the MCU execution latency measurements into the three stages listed above: SPI read, data processing, and UART transmission. To achieve that, I used three different GPIO pins to measure each stage, turning it on and off at the correct position in the infinite while loop. Further hardware connections also had to be made, as two more pins had to be connected to two more channels of the oscilloscope. Below are the results attained:
@@ -73,8 +80,19 @@ The first goal of week 8 was to split the MCU execution latency measurements int
 2. Data Processing → 9.2 μs
 3. UART Transmission → 173.8 μs
 
-The results above show a higher latency compared to the mean latency that was measured when the MCU execution latency was measured as a whole. This is most likely due to the "Observer Effect", also known as Instrumentation Overhead. When the total latency was measured, the pin's stopwatch only had to be turned on and off once, while measuring separately required the pins' stopwatches to be toggled three times. The act of toggling a pin's stopwatch also involves latency from the CPU (about 1.5 μs), which explains the small increase in latency when measured separately. 
+The results above show a higher latency compared to the mean latency that was measured when the MCU execution latency was measured as a whole. This is most likely due to the fact that measuring the three different stages individually required additional GPIO writes. That slightly altered the execution path, resulting in the total latency being higher compared to when it was measured as a whole. Furthermore, we can see that compared to SPI reading and UART transmission, data processing took comparatively less time. This is expected since most of the latency is composed of communication in and between devices instead of math. 
 
 ### **Week 9**
 Week 9's time was spent on moving the complementary filter from the Python visualization script onto main.c. There are several advantages to this. Firstly, the dt calculations in the Python script would not be a fixed value, as it would differ depending on the state of the OS the program is being run from. However, the STM32 hardware timer triggers every 10ms, which makes the dt value a fixed value, making the filter more accurate. Additionally, the payload shrinks from 14 bytes to 10 bytes, as it no longer sends all the accelerometer and gyroscope measurements and instead just sends the final pitch and roll estimations. Even though the size of the payload decreased from 14 bytes to 10 bytes, the total latency increased due to the fact that complex sensor fusion was added into main.c. Now, the total latency is:
-- Total Latency: 454.6 μs
+- **Total Latency: 454.6 μs**
+
+
+## **Future Improvements**
+### **Replace Blocking Communication wtih DMA**
+As of current, blocking HAL functions are implemented for both SPI read and UART transmissions. Using DMA instead would let the CPU to perform sensor fusion and other computations while data transfer occurs in the background, which would reduce system responsiveness.
+
+### **Use ICM-20948 Data Ready Interrupt**
+The data ready interrupt pin on the ICM-20948 IMU could be connected to the STM32's external interrupt pin instead of sampling with a periodic timer. This would reduce sampling jitter and unnecessary polling as it would ensure each SPI reading happens immediately after new sensor data becomes available. 
+
+### **Replace the Complementary Filter with a Madgwick Filter**
+While a complementary filter is easy to utilize and requires fewer computational resources, a Madgwick filter would improve orientation accuracy while remaining efficient enough for real-time execution. This is because a Madgwick filter combines the accelerometer, gyroscope, and magnetometer measurements using quaternion-based estimation.
